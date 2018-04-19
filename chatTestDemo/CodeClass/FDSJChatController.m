@@ -156,7 +156,6 @@
 
 - (void)UUInputFunctionView:(UUInputFunctionView *)funcView sendMessage:(NSString *)message
 {
-    
     NSDictionary *dic = @{@"content": message,
                           @"type": @"text"};
     NSDictionary *Dic = @{@"message": dic};
