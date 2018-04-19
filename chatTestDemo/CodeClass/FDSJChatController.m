@@ -15,6 +15,7 @@
 #import "HttpRequestManager.h"
 #import "MJExtension.h"
 #import "FDSJChatModel.h"
+#import "chatTestDemo-swift.h"
 
 @interface FDSJChatController ()<UUInputFunctionViewDelegate, UUMessageCellDelegate, UITableViewDataSource, UITableViewDelegate>
 {
@@ -28,7 +29,11 @@
 @property (strong, nonatomic) UUInputFunctionView *inputFuncView;
 //聊天数据数组
 @property (strong, nonatomic) NSMutableArray      *chatArrays;
-
+/*!
+ @property 客户端socket
+ @abstract 客户端socket
+ */
+@property (nonatomic, strong) SocketIOClient *clientSocket;
 @end
 
 @implementation FDSJChatController
@@ -53,6 +58,11 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
+    //连接服务器
+    [self.clientSocket connect];
+    [self.clientSocket on:@"connection" callback:^(NSArray * array, SocketAckEmitter * emitter) {
+        NSLog(@"亲，服务器连接成功！");
+    }];
     [self fdsj_setUpUI];
     [self fdsj_loadRequest];
     self.chatTableView.frame = CGRectMake(0, 0, self.view.uu_width, self.view.uu_height-40);
@@ -129,6 +139,19 @@
     [self.chatTableView reloadData];
 }
 
+/*!
+@method  收到 text
+@abstract 收到 text，数据处理
+*/
+- (void)receiveText {
+    [self.clientSocket on:@"text" callback:^(NSArray * array, SocketAckEmitter * emitter) {
+        NSLog(@"%@", array);
+//        NSString *data = array.firstObject;
+        [self.chatTableView reloadData];
+        }];
+    
+}
+
 
 #pragma mark - tableView delegate & datasource
 
@@ -151,7 +174,6 @@
 }
 
 
-
 #pragma mark - InputFunctionViewDelegate
 
 - (void)UUInputFunctionView:(UUInputFunctionView *)funcView sendMessage:(NSString *)message
@@ -164,6 +186,9 @@
     } failure:^(NSError *error) {
         
     }];
+#warning 测试
+    //socket发送数据
+    [self.clientSocket emit:@"" with:@[@"1"]];
 }
 
 - (void)dealTheFunctionData:(NSDictionary *)dic
@@ -200,6 +225,21 @@
         _chatArrays = [[NSMutableArray alloc]init];
     }
     return _chatArrays;
+}
+
+/*!
+ @method 懒加载
+ @abstract 初始化客户端socket对象
+ @result 客户端socket对象
+ */
+- (SocketIOClient *)clientSocket {
+    if (!_clientSocket) {
+        NSURL *url = [NSURL URLWithString:@"http://192.168.31.163:3000"];
+        _clientSocket = [[SocketIOClient alloc]initWithSocketURL:url
+                                                          config:@{@"log": @YES, @"forcePolling": @YES}];
+        
+    }
+    return _clientSocket;
 }
 
 - (void)didReceiveMemoryWarning {
